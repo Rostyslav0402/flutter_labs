@@ -24,6 +24,13 @@ class MyApp extends StatelessWidget {
         '/register': (context) => const RegisterScreen(),
         '/profile': (context) => const ProfileScreen(),
         '/home': (context) => const HomeScreen(),
+        '/login': (context) => const LoginScreen(),
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name == '/home') {
+          return MaterialPageRoute(builder: (context) => const HomeScreen());
+        }
+        return null;
       },
     );
   }
