@@ -29,6 +29,7 @@ class SharedPreferencesUserStorage implements UserStorage {
   @override
   Future<bool> validateLogin(String username, String password) async {
     final prefs = await SharedPreferences.getInstance();
+    // ignore: unused_local_variable
     final String? storedNickname = prefs.getString('nickname');
     final String? storedUsername = prefs.getString('username');
     final String? storedPassword = prefs.getString('password');

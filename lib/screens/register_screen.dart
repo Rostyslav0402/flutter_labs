@@ -13,8 +13,12 @@ class RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _nicknameController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  // ignore: lines_longer_than_80_chars
+  final TextEditingController _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final UserStorage _userStorage = SharedPreferencesUserStorage();
+
+  bool _isLoading = false;
 
   String? validateEmail(String? value) {
     if (value == null || value.isEmpty) {
@@ -36,14 +40,44 @@ class RegisterScreenState extends State<RegisterScreen> {
     return null;
   }
 
+  String? validateConfirmPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please confirm your password';
+    }
+    if (value != _passwordController.text) {
+      return 'Passwords do not match';
+    }
+    return null;
+  }
+
   void _register() async {
     if (_formKey.currentState?.validate() ?? false) {
+      setState(() {
+        _isLoading = true;
+      });
+
       await _userStorage.saveUserData(
         _usernameController.text,
         _passwordController.text,
         _nicknameController.text,
       );
-      if(!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Registration successful!')),
+      );
+
+      // Очищуємо поля вводу
+      _nicknameController.clear();
+      _usernameController.clear();
+      _passwordController.clear();
+      _confirmPasswordController.clear();
+
       Navigator.pushNamed(context, '/login');
     }
   }
@@ -82,10 +116,18 @@ class RegisterScreenState extends State<RegisterScreen> {
                 validator: validatePassword,
               ),
               const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _register,
-                child: const Text('Register'),
+              TextFormField(
+                controller: _confirmPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Confirm Password'),
+                validator: validateConfirmPassword,
               ),
+              const SizedBox(height: 16),
+              // ignore: lines_longer_than_80_chars
+              if (_isLoading) const CircularProgressIndicator() else ElevatedButton(
+                      onPressed: _register,
+                      child: const Text('Register'),
+                    ),
             ],
           ),
         ),

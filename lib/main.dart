@@ -1,15 +1,33 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:my_project/screens/home_screen.dart';
 import 'package:my_project/screens/login_screen.dart';
 import 'package:my_project/screens/profile_screen.dart';
 import 'package:my_project/screens/register_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
-  runApp(const MyApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final prefs = await SharedPreferences.getInstance();
+  final email = prefs.getString('email');
+  final connectivityResult = await Connectivity().checkConnectivity();
+
+  // Перевірка підключення до інтернету
+  if (email != null && connectivityResult == ConnectivityResult.none) {
+    runApp(const MyApp(initialRoute: '/home', showNetworkAlert: true));
+  } else if (email != null) {
+    runApp(const MyApp(initialRoute: '/home'));
+  } else {
+    runApp(const MyApp(initialRoute: '/login'));
+  }
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final String initialRoute;
+  final bool showNetworkAlert;
+
+  const MyApp({required this.initialRoute, super.key, this.showNetworkAlert = false});
 
   @override
   Widget build(BuildContext context) {
@@ -18,19 +36,14 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      initialRoute: '/',
+      initialRoute: initialRoute,
       routes: {
-        '/': (context) => const LoginScreen(),
+        '/': (context) => const LoginScreen(),   // Додано маршрут для '/'
+        '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/profile': (context) => const ProfileScreen(),
-        '/home': (context) => const HomeScreen(),
-        '/login': (context) => const LoginScreen(),
-      },
-      onGenerateRoute: (settings) {
-        if (settings.name == '/home') {
-          return MaterialPageRoute(builder: (context) => const HomeScreen());
-        }
-        return null;
+        '/home': (context) => HomeScreen(showNetworkAlert: showNetworkAlert),
+        '/login_screen': (context) => const LoginScreen(), // Додано для /login_screen
       },
     );
   }

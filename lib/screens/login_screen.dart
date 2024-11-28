@@ -1,6 +1,8 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:my_project/services/shared_preferences_user_storage.dart';
 import 'package:my_project/services/user_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,33 +17,102 @@ class LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final UserStorage _userStorage = SharedPreferencesUserStorage();
 
+  /// Перевірка стану мережі
+  Future<bool> _checkNetwork() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    // ignore: unrelated_type_equality_checks
+    if (connectivityResult == ConnectivityResult.none) {
+      await _showNetworkDialog();
+      return false;
+    }
+    return true;
+  }
+
+  /// Показати діалог про відсутність інтернету
+  Future<void> _showNetworkDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('No Internet Connection'),
+          content: const Text('Please connect to the internet to log in.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Логіка логіну
   void _login() async {
     if (_formKey.currentState?.validate() ?? false) {
+      // Перевірка наявності інтернету
+      final hasNetwork = await _checkNetwork();
+      if (!hasNetwork) return;
+
       final bool isValid = await _userStorage.validateLogin(
         _usernameController.text,
         _passwordController.text,
       );
-      if(!mounted) return; // Перевірка, чи не закрито вікно
+
+      if (!mounted) return; // Перевірка, чи не закрито вікно
+
       if (isValid) {
-        Navigator.pushNamed(context, '/home'); // Перехід на головну сторінку
+        // Зберігаємо дані в SharedPreferences для автологіну
+        final prefs = await SharedPreferences.getInstance();
+        prefs.setString('email', _usernameController.text);
+
+        // Показуємо повідомлення про успішний вхід
+        await _showSuccessDialog();
+        if(mounted){
+        Navigator.pushNamed(context, '/home');
+         } // Перехід на головну сторінку
       } else {
-        showDialog<void>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Login Failed'),
-            content: const Text('Invalid username or password'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context); // Закрити діалог
-                },
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
+        _showLoginFailedDialog();
       }
     }
+  }
+
+  /// Показ діалогового вікна про успішний вхід
+  Future<void> _showSuccessDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Login Successful'),
+          content: const Text('Welcome back!'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Показ діалогового вікна про невдалий вхід
+  void _showLoginFailedDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Login Failed'),
+          content: const Text('Invalid username or password'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override

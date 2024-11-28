@@ -1,8 +1,11 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final bool showNetworkAlert;
+
+  const HomeScreen({required this.showNetworkAlert, super.key});
 
   @override
   HomeScreenState createState() => HomeScreenState();
@@ -11,33 +14,100 @@ class HomeScreen extends StatefulWidget {
 class HomeScreenState extends State<HomeScreen> {
   String _email = '';
   String _nickname = '';
-
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _checkNetwork();
     _loadUserData();
   }
 
+  /// Перевірка стану мережі
+  Future<void> _checkNetwork() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    // ignore: unrelated_type_equality_checks
+    if (connectivityResult == ConnectivityResult.none) {
+      _showNetworkDialog();
+    }
+  }
+
+  /// Показати діалогове вікно про відсутність інтернету
+  void _showNetworkDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('No Internet Connection'),
+          content: const Text(
+            'Please connect to the internet to enjoy full functionality.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Завантаження даних користувача
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       _email = prefs.getString('email') ?? 'No email set';
       _nickname = prefs.getString('nickname') ?? 'No nickname set';
+      _isLoading = false;
     });
   }
 
-  // Виходимо з акаунта
+  /// Вихід із системи
   Future<void> _logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('email');
-    await prefs.remove('nickname'); // очищуємо nickname
-    if (!mounted) return;
-    Navigator.pushReplacementNamed(context, '/');
+    final shouldLogout = await _showLogoutDialog();
+    if (shouldLogout == true) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/');
+    }
+  }
+
+  /// Показ діалогового вікна підтвердження виходу
+  Future<bool?> _showLogoutDialog() async {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Confirm Logout'),
+          content: const Text('Are you sure you want to log out?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home'),
@@ -57,13 +127,13 @@ class HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Welcome, $_nickname!', // Тепер виводимо nickname замість email
+              'Welcome, $_nickname!', // Відображаємо nickname
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 32),
             ElevatedButton.icon(
-              onPressed: () { 
+              onPressed: () {
                 Navigator.pushNamed(context, '/profile');
               },
               icon: const Icon(Icons.person),

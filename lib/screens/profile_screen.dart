@@ -1,4 +1,4 @@
-import 'dart:convert'; // Для конвертації списку в JSON
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -23,22 +23,26 @@ class ProfileScreenState extends State<ProfileScreen> {
     _loadSubjects();
   }
 
-  // Завантажуємо електронну пошту з SharedPreferences
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
     final String email = prefs.getString('email') ?? '';
-    _emailController.text = email;
+    final String nickname = prefs.getString('nickname') ?? '';
+    setState(() {
+      _emailController.text = email;
+      _nicknameController.text = nickname;
+    });
   }
 
-  // Зберігаємо електронну пошту в SharedPreferences
-  Future<void> _saveEmail() async {
+  Future<void> _saveUserData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('email', _emailController.text);
+    await prefs.setString('nickname', _nicknameController.text);
     if (!mounted) return;
-    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Profile information saved successfully!')),
+    );
   }
 
-  // Завантажуємо предмети з SharedPreferences
   Future<void> _loadSubjects() async {
     final prefs = await SharedPreferences.getInstance();
     final String? subjectsJson = prefs.getString('subjects');
@@ -51,14 +55,12 @@ class ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // Зберігаємо предмети в SharedPreferences
   Future<void> _saveSubjects() async {
     final prefs = await SharedPreferences.getInstance();
     final String subjectsJson = json.encode(_subjects);
     await prefs.setString('subjects', subjectsJson);
   }
 
-  // Додаємо предмет до списку
   void _addSubject() {
     final String subject = _subjectController.text;
     final String labCountText = _labCountController.text;
@@ -72,6 +74,9 @@ class ProfileScreenState extends State<ProfileScreen> {
         _saveSubjects();
         _subjectController.clear();
         _labCountController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Subject added successfully!')),
+        );
       } else {
         _showError('Please enter a valid number for lab works.');
       }
@@ -80,7 +85,18 @@ class ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // Показуємо діалогове вікно з помилкою
+  void _removeSubject(int index) {
+    setState(() {
+      _subjects.removeAt(index);
+    });
+    _saveSubjects();
+  }
+
+  void _clearAllSubjects() {
+    setState(_subjects.clear);
+    _saveSubjects();
+  }
+
   void _showError(String message) {
     showDialog<void>(
       context: context,
@@ -89,9 +105,7 @@ class ProfileScreenState extends State<ProfileScreen> {
         content: Text(message),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
             child: const Text('OK'),
           ),
         ],
@@ -102,7 +116,16 @@ class ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(
+        title: const Text('Profile'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_forever),
+            onPressed: _clearAllSubjects,
+            tooltip: 'Clear All Subjects',
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(
@@ -125,7 +148,7 @@ class ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: _saveEmail,
+                onPressed: _saveUserData,
                 child: const Text('Save Info'),
               ),
               const Divider(height: 32),
@@ -155,21 +178,26 @@ class ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              if (_subjects.isEmpty) 
-                const Text('No subjects added yet.') 
-              else ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _subjects.length,
-                      itemBuilder: (context, index) {
-                        final subject = _subjects[index];
-                        return ListTile(
-                          title: Text(subject['subject'] as String),
-                          // ignore: lines_longer_than_80_chars
-                          subtitle: Text('Labs: ${(subject['labs'] as int).toString()}'),
-                        );
-                      },
-                    ),
+              if (_subjects.isEmpty)
+                const Text('No subjects added yet.')
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _subjects.length,
+                  itemBuilder: (context, index) {
+                    final subject = _subjects[index];
+                    return ListTile(
+                      title: Text(subject['subject'] as String),
+                      // ignore: lines_longer_than_80_chars
+                      subtitle: Text('Labs: ${(subject['labs'] as int).toString()}'),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => _removeSubject(index),
+                      ),
+                    );
+                  },
+                ),
             ],
           ),
         ),
