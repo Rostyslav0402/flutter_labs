@@ -27,6 +27,7 @@ class MyApp extends StatelessWidget {
   final String initialRoute;
   final bool showNetworkAlert;
 
+  // ignore: lines_longer_than_80_chars
   const MyApp({required this.initialRoute, super.key, this.showNetworkAlert = false});
 
   @override

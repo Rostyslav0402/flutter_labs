@@ -102,8 +102,8 @@ class LoginScreenState extends State<LoginScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Login Failed'),
-          content: const Text('Invalid username or password'),
+          title: const Text(' No internet'),
+          content: const Text('try later'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),

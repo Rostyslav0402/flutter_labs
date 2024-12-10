@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,33 +17,54 @@ class HomeScreenState extends State<HomeScreen> {
   String _email = '';
   String _nickname = '';
   bool _isLoading = true;
+  // ignore: lines_longer_than_80_chars
+  late StreamSubscription<List<ConnectivityResult>> _connectionSubscription; // Updated type
 
   @override
   void initState() {
     super.initState();
     _checkNetwork();
     _loadUserData();
+    // ignore: lines_longer_than_80_chars
+    _connectionSubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
+      // ignore: lines_longer_than_80_chars
+      // Handle the first connectivity result (assumes the first entry in the list is what you need)
+      // ignore: lines_longer_than_80_chars
+      final result = results.first; // Assuming the first result is the one you want
+      if (result == ConnectivityResult.none) {
+        // ignore: lines_longer_than_80_chars
+        _showNetworkDialog('No Internet Connection', 'Please connect to the internet to enjoy full functionality.');
+      } else {
+        _showNetworkDialog('Connection Restored', 'You can now use the app.');
+      }
+    });
   }
 
-  /// Перевірка стану мережі
+  @override
+  void dispose() {
+    // Cancel the subscription when the widget is disposed
+    _connectionSubscription.cancel();
+    super.dispose();
+  }
+
+  /// Check network status
   Future<void> _checkNetwork() async {
     final connectivityResult = await Connectivity().checkConnectivity();
-    // ignore: unrelated_type_equality_checks
     if (connectivityResult == ConnectivityResult.none) {
-      _showNetworkDialog();
+      // ignore: lines_longer_than_80_chars
+      _showNetworkDialog('No Internet Connection', 'Please connect to the internet to enjoy full functionality.');
     }
   }
 
-  /// Показати діалогове вікно про відсутність інтернету
-  void _showNetworkDialog() {
+  /// Show network status dialog
+  void _showNetworkDialog(String title, String content) {
+    if (!mounted) return; // Check if widget is still in the widget tree
     showDialog<void>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('No Internet Connection'),
-          content: const Text(
-            'Please connect to the internet to enjoy full functionality.',
-          ),
+          title: Text(title),
+          content: Text(content),
           actions: [
             TextButton(
               onPressed: () {
@@ -55,7 +78,7 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Завантаження даних користувача
+  /// Load user data
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
@@ -66,7 +89,7 @@ class HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  /// Вихід із системи
+  /// Log out
   Future<void> _logout() async {
     final shouldLogout = await _showLogoutDialog();
     if (shouldLogout == true) {
@@ -77,7 +100,7 @@ class HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// Показ діалогового вікна підтвердження виходу
+  /// Show logout confirmation dialog
   Future<bool?> _showLogoutDialog() async {
     return showDialog<bool>(
       context: context,
@@ -127,7 +150,7 @@ class HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Welcome, $_nickname!', // Відображаємо nickname
+              'Welcome, $_nickname!', // Display nickname
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
